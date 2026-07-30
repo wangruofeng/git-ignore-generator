@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>.gitignore 生成器</title>
+<link rel="icon" href="favicon.svg">
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --border: #e5e7eb;
+    --border-strong: #d1d5db;
+    --text: #1f2328;
+    --text-muted: #6b7280;
+    --text-faint: #9ca3af;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --accent-soft: #eff6ff;
+    --danger: #dc2626;
+    --danger-soft: #fef2f2;
+    --shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+    --radius: 10px;
+  }
+  html.dark {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --border: #30363d;
+    --border-strong: #484f58;
+    --text: #e6edf3;
+    --text-muted: #9198a1;
+    --text-faint: #6e7681;
+    --accent: #58a6ff;
+    --accent-hover: #79b8ff;
+    --accent-soft: #1a2332;
+    --danger: #f87171;
+    --danger-soft: #2a1a1c;
+    --shadow: 0 1px 3px rgba(0,0,0,.4);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                 "Hiragino Sans GB", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---------- 页头 ---------- */
+  header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 20px; background: var(--panel);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 650; }
+  .logo .mark {
+    width: 30px; height: 30px; border-radius: 8px;
+    display: grid; place-items: center;
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    color: #fff; font-size: 14px; font-weight: 700; line-height: 1;
+  }
+  .logo .sub { font-size: 12px; color: var(--text-muted); font-weight: 400; }
+  .spacer { flex: 1; }
+
+  .icon-btn {
+    width: 36px; height: 36px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--panel);
+    color: var(--text-muted); cursor: pointer;
+    display: grid; place-items: center; transition: all .15s;
+  }
+  .icon-btn:hover { color: var(--text); border-color: var(--border-strong); background: var(--bg); }
+  .icon-btn svg { width: 18px; height: 18px; }
+  header .icon-btn { border: none; background: transparent; }
+  header .icon-btn:hover { background: var(--bg); border-color: transparent; }
+
+  /* ---------- 工具栏 ---------- */
+  .toolbar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+    padding: 10px 20px; background: var(--panel);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 34px; padding: 0 12px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--panel); color: var(--text);
+    font-size: 13px; cursor: pointer; transition: all .15s; white-space: nowrap;
+  }
+  .btn:hover:not(:disabled) { border-color: var(--border-strong); background: var(--bg); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn svg { width: 15px; height: 15px; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+  .btn.ghost { border-color: transparent; color: var(--text-muted); }
+  .btn.ghost:hover { background: var(--bg); color: var(--text); }
+  .divider { width: 1px; height: 22px; background: var(--border); margin: 0 4px; }
+
+  .stat { font-size: 12px; color: var(--text-muted); display: inline-flex; align-items: center; gap: 6px; }
+  .stat b { color: var(--text); font-weight: 600; }
+
+  /* ---------- 主布局：左侧模板 + 右侧预览 ---------- */
+  main { flex: 1; overflow: hidden; display: flex; }
+  .panel {
+    flex: 1; min-width: 0; overflow: auto;
+    padding: 18px 20px;
+  }
+  .panel.left { max-width: 420px; border-right: 1px solid var(--border); }
+  .panel.right { background: var(--panel); }
+
+  /* ---------- 搜索框 ---------- */
+  .search-wrap {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--bg); padding-bottom: 12px;
+  }
+  .search-box {
+    width: 100%; height: 40px;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--panel); color: var(--text);
+    padding: 0 12px; font-size: 14px;
+  }
+  .search-box:focus { outline: none; border-color: var(--accent); }
+  .search-box::placeholder { color: var(--text-faint); }
+
+  /* ---------- 模板分组 ---------- */
+  .group { margin-bottom: 18px; }
+  .group-title {
+    font-size: 12px; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: .03em;
+    margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+  }
+  .group-count {
+    font-size: 11px; font-weight: 500;
+    color: var(--text-faint); background: var(--panel);
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 0 6px; line-height: 16px;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  /* 复选框芯片 */
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 10px; border-radius: 7px;
+    border: 1px solid var(--border); background: var(--panel);
+    color: var(--text); font-size: 13px; cursor: pointer;
+    transition: all .15s; user-select: none;
+  }
+  .chip:hover { border-color: var(--border-strong); background: var(--bg); }
+  .chip.active {
+    background: var(--accent-soft); border-color: var(--accent);
+    color: var(--accent);
+  }
+  .chip input {
+    width: 14px; height: 14px; margin: 0; cursor: pointer;
+    accent-color: var(--accent);
+  }
+  .chip .name { pointer-events: none; }
+
+  .empty-tip {
+    color: var(--text-faint); font-size: 13px; padding: 12px 0;
+  }
+
+  /* ---------- 右侧预览 ---------- */
+  .preview-card {
+    max-width: 900px; margin: 0 auto;
+    background: var(--panel);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow); overflow: hidden;
+    display: flex; flex-direction: column; height: 100%;
+  }
+  .preview-head {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+    background: var(--bg); font-size: 12px; color: var(--text-muted);
+  }
+  .preview-head .filename { font-weight: 600; color: var(--text); }
+  .preview-body {
+    flex: 1; overflow: auto; padding: 14px 16px;
+    font-family: "SF Mono", "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+    font-size: 13px; line-height: 1.75;
+  }
+  pre {
+    margin: 0; white-space: pre-wrap; word-break: break-word;
+    color: var(--text);
+  }
+
+  /* ---------- 自定义规则 ---------- */
+  .custom-box {
+    margin-top: 18px;
+    padding: 14px; border-radius: var(--radius);
+    border: 1px solid var(--border); background: var(--panel);
+  }
+  .custom-box label {
+    display: block; font-size: 13px; font-weight: 600;
+    color: var(--text); margin-bottom: 8px;
+  }
+  .custom-box textarea {
+    width: 100%; min-height: 90px;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--bg); color: var(--text);
+    padding: 10px 12px; font-family: monospace; font-size: 13px; line-height: 1.6;
+    resize: vertical;
+  }
+  .custom-box textarea:focus { outline: none; border-color: var(--accent); }
+  .custom-box textarea::placeholder { color: var(--text-faint); }
+
+  /* ---------- Toast ---------- */
+  #toast {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--text); color: var(--panel);
+    padding: 9px 16px; border-radius: 8px; font-size: 13px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.2);
+    opacity: 0; pointer-events: none; transition: all .22s;
+    z-index: 200; display: flex; align-items: center; gap: 7px;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast svg { width: 15px; height: 15px; }
+
+  .hidden { display: none !important; }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 6px; border: 2px solid var(--bg); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
+
+  @media (max-width: 760px) {
+    header { padding: 12px 14px; }
+    .toolbar { padding: 8px 12px; gap: 6px; }
+    main { flex-direction: column; overflow: auto; }
+    .panel { max-width: none; border-right: none; border-bottom: 1px solid var(--border); }
+    .panel.left { max-width: none; }
+    .panel.right { border-bottom: none; }
+    .logo .sub { display: none; }
+    .btn { height: 32px; padding: 0 10px; font-size: 12.5px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="mark">ig</div>
+    <div>
+      .gitignore 生成器
+      <div class="sub">勾选技术栈 · 实时组合 · 一键复制下载</div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <a class="icon-btn" href="https://github.com/wangruofeng/git-ignore-generator" target="_blank" rel="noopener noreferrer" title="查看 GitHub 源码" aria-label="GitHub 源码仓库">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.37.5 0 5.78 0 12.292c0 5.211 3.438 9.63 8.205 11.188.6.111.82-.254.82-.567 0-.28-.01-1.022-.015-2.005-3.338.711-4.042-1.582-4.042-1.582-.546-1.361-1.335-1.725-1.335-1.725-1.087-.731.084-.716.084-.716 1.205.082 1.838 1.215 1.838 1.215 1.07 1.803 2.809 1.282 3.495.981.108-.763.417-1.282.76-1.577-2.665-.295-5.466-1.309-5.466-5.827 0-1.287.465-2.339 1.235-3.164-.135-.297-.54-1.498.105-3.121 0 0 1.005-.316 3.3 1.209.96-.262 1.98-.392 3-.397 1.02.005 2.04.135 3 .397 2.28-1.525 3.285-1.209 3.285-1.209.645 1.623.24 2.824.12 3.121.765.825 1.23 1.877 1.23 3.164 0 4.53-2.805 5.527-5.475 5.817.42.354.81 1.077.81 2.182 0 1.578-.015 2.846-.015 3.229 0 .309.21.678.825.562C20.565 21.917 24 17.495 24 12.292 24 5.78 18.627.5 12 .5z"/></svg>
+  </a>
+  <button class="icon-btn" id="themeBtn" title="切换深浅色"></button>
+</header>
+
+<div class="toolbar">
+  <button class="btn" id="commonBtn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    全选常用
+  </button>
+  <button class="btn ghost" id="clearBtn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+    清空
+  </button>
+
+  <div class="divider"></div>
+
+  <button class="btn primary" id="copyBtn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+    复制结果
+  </button>
+  <button class="btn" id="downloadBtn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    下载 .gitignore
+  </button>
+
+  <div class="spacer"></div>
+  <div class="stat">
+    <span>已选 <b id="selCount">0</b> 项</span>
+    <span>·</span>
+    <span>共 <b id="lineCount">0</b> 行规则</span>
+  </div>
+</div>
+
+<main>
+  <!-- 左侧：模板选择 -->
+  <div class="panel left" id="leftPanel">
+    <div class="search-wrap">
+      <input class="search-box" id="searchBox" type="text" placeholder="搜索模板（中文 / 英文）…" autocomplete="off">
+    </div>
+    <div id="groups"></div>
+  </div>
+
+  <!-- 右侧：实时预览 -->
+  <div class="panel right">
+    <div class="preview-card">
+      <div class="preview-head">
+        <span>🛡️</span>
+        <span class="filename">.gitignore</span>
+        <span>·</span>
+        <span id="headInfo">未选择任何模板</span>
+      </div>
+      <div class="preview-body">
+        <pre id="previewPre"># 请在左侧勾选需要的技术栈模板…</pre>
+      </div>
+    </div>
+
+    <div class="custom-box">
+      <label for="customRules">自定义追加规则</label>
+      <textarea id="customRules" placeholder="在此输入需要额外追加的 .gitignore 规则，每行一条…" spellcheck="false"></textarea>
+    </div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+/* =========================================================
+   .gitignore 生成器
+   - 内嵌 40+ 技术栈模板
+   - 左侧勾选 / 搜索过滤 / 分类展示
+   - 右侧实时生成预览
+   - 支持复制、下载、自定义追加规则
+   - 选中状态与主题持久化到 localStorage
+   ========================================================= */
+
+const $ = (s) => document.querySelector(s);
+
+/* ---------- 模板库（内嵌常量，零依赖） ---------- */
+const TEMPLATES = [
+  // 语言类
+  { id: 'node', name: 'Node', category: '语言', rules:
+`node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.env
+.env.local
+.env.*.local
+dist/
+build/
+.nyc_output/
+coverage/` },
+  { id: 'python', name: 'Python', category: '语言', rules:
+`__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+venv/
+.env
+.venv
+pytest_cache/
+.mypy_cache/` },
+  { id: 'java', name: 'Java', category: '语言', rules:
+`*.class
+*.log
+*.jar
+*.war
+*.ear
+target/
+build/
+out/
+.idea/
+*.iml
+.gradle/
+.settings/
+.classpath
+.project` },
+  { id: 'go', name: 'Go', category: '语言', rules:
+`*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+bin/
+# Go 模块缓存通常无需忽略；保留 go.sum` },
+  { id: 'rust', name: 'Rust', category: '语言', rules:
+`target/
+Cargo.lock
+**/*.rs.bk
+*.pdb` },
+  { id: 'cpp', name: 'C/C++', category: '语言', rules:
+`*.o
+*.obj
+*.so
+*.dll
+*.dylib
+*.a
+*.lib
+*.exe
+*.out
+*.app
+build/
+cmake-build-*/
+.vscode/
+.idea/` },
+  { id: 'ruby', name: 'Ruby', category: '语言', rules:
+`*.gem
+*.rbc
+/.config
+/coverage/
+/InstalledFiles
+/pkg/
+/spec/reports/
+/test/tmp/
+/tmp/
+Gemfile.lock
+.ruby-version
+.ruby-gemset` },
+  { id: 'php', name: 'PHP', category: '语言', rules:
+`vendor/
+composer.lock
+.phpunit.result.cache
+phpunit.xml
+.env
+.env.local
+.idea/
+.vscode/` },
+  { id: 'swift', name: 'Swift', category: '语言', rules:
+`.build/
+Packages/
+Package.resolved
+*.xcodeproj/
+*.xcworkspace/
+DerivedData/
+.build/` },
+  { id: 'kotlin', name: 'Kotlin', category: '语言', rules:
+`*.class
+*.log
+*.jar
+*.war
+*.ear
+target/
+build/
+out/
+.idea/
+*.iml
+.gradle/` },
+  { id: 'dotnet', name: '.NET', category: '语言', rules:
+`bin/
+obj/
+*.dll
+*.exe
+*.pdb
+*.cache
+*.user
+*.suo
+packages/
+project.lock.json
+.vs/` },
+  { id: 'dart', name: 'Dart', category: '语言', rules:
+`.dart_tool/
+.packages
+build/
+pubspec.lock
+.flutter-plugins
+.flutter-plugins-dependencies
+.idea/` },
+
+  // 前端类
+  { id: 'react', name: 'React', category: '前端', rules:
+`node_modules/
+dist/
+build/
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*` },
+  { id: 'vue', name: 'Vue', category: '前端', rules:
+`node_modules/
+dist/
+.env.local
+.env.*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*` },
+  { id: 'angular', name: 'Angular', category: '前端', rules:
+`node_modules/
+dist/
+.angular/
+.env
+.env.*
+package-lock.json
+yarn.lock
+*.log` },
+  { id: 'nextjs', name: 'Next.js', category: '前端', rules:
+`node_modules/
+.next/
+out/
+.env.local
+.env.*.local
+vercel
+.turbo/` },
+  { id: 'vite', name: 'Vite', category: '前端', rules:
+`node_modules/
+dist/
+dist-ssr/
+*.local
+.env.local
+.env.*.local` },
+  { id: 'nuxt', name: 'Nuxt', category: '前端', rules:
+`node_modules/
+.nuxt/
+.output/
+.env
+.nitro/
+.cache/
+dist/` },
+  { id: 'svelte', name: 'Svelte', category: '前端', rules:
+`node_modules/
+/public/build/
+.DS_Store
+.env
+.env.local` },
+  { id: 'webpack', name: 'Webpack', category: '前端', rules:
+`node_modules/
+dist/
+build/
+coverage/
+.cache/
+*.log` },
+
+  // IDE / 编辑器
+  { id: 'vscode', name: 'VSCode', category: 'IDE', rules:
+`.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+.history/` },
+  { id: 'jetbrains', name: 'JetBrains', category: 'IDE', rules:
+`.idea/
+*.iml
+*.iws
+out/
+# 按需保留：!.idea/codeStyles, !.idea/runConfigurations` },
+  { id: 'vim', name: 'Vim', category: 'IDE', rules:
+`*.swp
+*.swo
+*~
+.netrwhist
+[._]*.un~` },
+  { id: 'sublime', name: 'Sublime', category: 'IDE', rules:
+`*.sublime-project
+*.sublime-workspace` },
+  { id: 'xcode', name: 'Xcode', category: 'IDE', rules:
+`xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+DerivedData/
+*.moved-aside
+*.pbxuser
+!default.pbxuser` },
+
+  // 系统
+  { id: 'macos', name: 'macOS', category: '系统', rules:
+`.DS_Store
+.AppleDouble
+.LSOverride
+Icon\r
+._*
+.Spotlight-V100
+.Trashes` },
+  { id: 'windows', name: 'Windows', category: '系统', rules:
+`Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+*.lnk` },
+  { id: 'linux', name: 'Linux', category: '系统', rules:
+`*~
+.nfs*
+.directory
+.Trash-*` },
+
+  // 工具
+  { id: 'docker', name: 'Docker', category: '工具', rules:
+`# 通常保留 Dockerfile；仅忽略本地构建产物
+.env.docker
+*.env
+docker-compose.override.yml` },
+  { id: 'cmake', name: 'CMake', category: '工具', rules:
+`CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+compile_commands.json
+CTestTestfile.cmake
+build/` },
+  { id: 'gradle', name: 'Gradle', category: '工具', rules:
+`.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/` },
+  { id: 'maven', name: 'Maven', category: '工具', rules:
+`target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml` },
+  { id: 'composer', name: 'Composer', category: '工具', rules:
+`vendor/
+composer.lock` },
+  { id: 'unity', name: 'Unity', category: '工具', rules:
+`[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+*.pidb
+*.svd` },
+  { id: 'unreal', name: 'Unreal', category: '工具', rules:
+`Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+Build/
+*.sln
+*.xcodeproj` },
+  { id: 'jekyll', name: 'Jekyll', category: '工具', rules:
+`_site/
+.sass-cache/
+.jekyll-cache/
+.jekyll-metadata
+vendor/` },
+  { id: 'wordpress', name: 'WordPress', category: '工具', rules:
+`wp-config.php
+wp-content/uploads/
+wp-content/cache/
+wp-content/backup*/
+.htaccess` },
+  { id: 'terraform', name: 'Terraform', category: '工具', rules:
+`*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json` },
+  { id: 'ansible', name: 'Ansible', category: '工具', rules:
+`*.retry
+.vault
+*.log` },
+
+  // 其他
+  { id: 'jupyter', name: 'Jupyter', category: '其他', rules:
+`.ipynb_checkpoints/
+*.ipynb_checkpoints
+__pycache__/
+*.pyc` },
+  { id: 'flask', name: 'Flask', category: '其他', rules:
+`__pycache__/
+*.pyc
+instance/
+.webassets-cache
+.env
+.venv
+venv/` },
+  { id: 'django', name: 'Django', category: '其他', rules:
+`*.log
+*.pot
+*.pyc
+__pycache__/
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+.env` },
+  { id: 'laravel', name: 'Laravel', category: '其他', rules:
+`node_modules/
+public/hot
+public/storage
+storage/*.key
+vendor/
+.env
+.env.backup
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml` },
+  { id: 'electron', name: 'Electron', category: '其他', rules:
+`node_modules/
+dist/
+out/
+release/
+*.log
+.env` },
+  { id: 'git', name: 'Git', category: '其他', rules:
+`# Git 自身文件无需忽略；此行用于占位说明
+# 如需忽略子模块变更，请单独配置` }
+];
+
+const COMMON_IDS = ['node', 'python', 'macos', 'vscode'];
+
+/* ---------- 状态 ---------- */
+const state = {
+  selected: new Set(),
+  search: '',
+  custom: ''
+};
+
+/* ---------- 通用工具 ---------- */
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+let toastTimer;
+function showToast(msg, ok) {
+  const t = $('#toast');
+  t.innerHTML = '';
+
+  // 成功 / 失败图标（使用 createElementNS 创建 SVG）
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '2.5');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  if (ok) {
+    const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+    poly.setAttribute('points', '20 6 9 17 4 12');
+    svg.appendChild(poly);
+  } else {
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', '12');
+    circle.setAttribute('cy', '12');
+    circle.setAttribute('r', '10');
+    const line1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line1.setAttribute('x1', '12');
+    line1.setAttribute('y1', '8');
+    line1.setAttribute('x2', '12');
+    line1.setAttribute('y2', '12');
+    const line2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line2.setAttribute('x1', '12');
+    line2.setAttribute('y1', '16');
+    line2.setAttribute('x2', '12.01');
+    line2.setAttribute('y2', '16');
+    svg.appendChild(circle);
+    svg.appendChild(line1);
+    svg.appendChild(line2);
+  }
+
+  const span = document.createElement('span');
+  span.textContent = msg;
+  t.appendChild(svg);
+  t.appendChild(span);
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1600);
+}
+
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch {}
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch {}
+  document.body.removeChild(ta);
+  return ok;
+}
+
+function saveSelected() {
+  try { localStorage.setItem('gig-selected', JSON.stringify(Array.from(state.selected))); } catch {}
+}
+
+function loadSelected() {
+  try {
+    const raw = localStorage.getItem('gig-selected');
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) arr.forEach(id => state.selected.add(id));
+    }
+  } catch {}
+}
+
+function saveCustom() {
+  try { localStorage.setItem('gig-custom', state.custom); } catch {}
+}
+
+function loadCustom() {
+  try {
+    const raw = localStorage.getItem('gig-custom');
+    if (raw !== null) state.custom = raw;
+  } catch {}
+}
+
+/* ---------- 模板查询 ---------- */
+function getCategoryOrder() {
+  return ['语言', '前端', 'IDE', '系统', '工具', '其他'];
+}
+
+function groupTemplates(templates) {
+  const order = getCategoryOrder();
+  const map = new Map();
+  order.forEach(c => map.set(c, []));
+  templates.forEach(t => {
+    if (!map.has(t.category)) map.set(t.category, []);
+    map.get(t.category).push(t);
+  });
+  return order.map(c => ({ category: c, items: map.get(c) || [] })).filter(g => g.items.length);
+}
+
+function matchesSearch(t) {
+  const q = state.search.trim().toLowerCase();
+  if (!q) return true;
+  return t.name.toLowerCase().includes(q) ||
+         t.id.toLowerCase().includes(q) ||
+         t.category.toLowerCase().includes(q);
+}
+
+/* ---------- 渲染 ---------- */
+function renderGroups() {
+  const container = $('#groups');
+  container.innerHTML = '';
+
+  const filtered = TEMPLATES.filter(matchesSearch);
+  const groups = groupTemplates(filtered);
+
+  if (groups.length === 0) {
+    const tip = document.createElement('div');
+    tip.className = 'empty-tip';
+    tip.textContent = '未找到匹配的模板';
+    container.appendChild(tip);
+    return;
+  }
+
+  groups.forEach(g => {
+    const groupEl = document.createElement('div');
+    groupEl.className = 'group';
+
+    const title = document.createElement('div');
+    title.className = 'group-title';
+    title.textContent = g.category;
+    const count = document.createElement('span');
+    count.className = 'group-count';
+    count.textContent = String(g.items.length);
+    title.appendChild(count);
+    groupEl.appendChild(title);
+
+    const chips = document.createElement('div');
+    chips.className = 'chips';
+    g.items.forEach(t => {
+      const chip = document.createElement('label');
+      chip.className = 'chip' + (state.selected.has(t.id) ? ' active' : '');
+      chip.title = t.rules;
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = state.selected.has(t.id);
+      cb.addEventListener('change', () => toggleTemplate(t.id));
+
+      const name = document.createElement('span');
+      name.className = 'name';
+      name.textContent = t.name;
+
+      chip.appendChild(cb);
+      chip.appendChild(name);
+      chip.addEventListener('click', (e) => {
+        if (e.target.tagName.toLowerCase() !== 'input') {
+          e.preventDefault();
+          toggleTemplate(t.id);
+        }
+      });
+      chips.appendChild(chip);
+    });
+    groupEl.appendChild(chips);
+    container.appendChild(groupEl);
+  });
+}
+
+function renderPreview() {
+  const ordered = TEMPLATES.filter(t => state.selected.has(t.id));
+  const text = generateGitignore(ordered, state.custom.trim());
+
+  const pre = $('#previewPre');
+  pre.textContent = text || '# 请在左侧勾选需要的技术栈模板…';
+
+  const headInfo = $('#headInfo');
+  if (ordered.length === 0) {
+    headInfo.textContent = '未选择任何模板';
+  } else {
+    headInfo.textContent = 'Generated for: ' + ordered.map(t => t.name).join(', ');
+  }
+
+  $('#selCount').textContent = String(ordered.length);
+  $('#lineCount').textContent = String(text.split('\n').length);
+}
+
+function generateGitignore(templates, custom) {
+  const lines = [];
+
+  // 顶部注释
+  if (templates.length) {
+    lines.push('# Generated for: ' + templates.map(t => t.name).join(', '));
+    lines.push('');
+  }
+
+  templates.forEach((t, i) => {
+    if (i > 0) lines.push('');
+    lines.push('# --- ' + t.name + ' ---');
+    lines.push(t.rules.trim());
+  });
+
+  if (custom) {
+    if (templates.length) lines.push('');
+    lines.push('# --- 自定义 ---');
+    lines.push(custom);
+  }
+
+  return lines.join('\n');
+}
+
+/* ---------- 交互 ---------- */
+function toggleTemplate(id) {
+  if (state.selected.has(id)) state.selected.delete(id);
+  else state.selected.add(id);
+  saveSelected();
+  renderGroups();
+  renderPreview();
+}
+
+function selectCommon() {
+  COMMON_IDS.forEach(id => {
+    if (TEMPLATES.some(t => t.id === id)) state.selected.add(id);
+  });
+  saveSelected();
+  renderGroups();
+  renderPreview();
+  showToast('已全选常用模板');
+}
+
+function clearAll() {
+  state.selected.clear();
+  saveSelected();
+  renderGroups();
+  renderPreview();
+  showToast('已清空选择');
+}
+
+async function copyResult() {
+  const text = generateGitignore(TEMPLATES.filter(t => state.selected.has(t.id)), state.custom.trim());
+  if (!text) { showToast('没有可复制的内容', false); return; }
+  if (await copyText(text)) showToast('已复制 .gitignore');
+  else showToast('复制失败', false);
+}
+
+function downloadResult() {
+  const text = generateGitignore(TEMPLATES.filter(t => state.selected.has(t.id)), state.custom.trim());
+  if (!text) { showToast('没有可下载的内容', false); return; }
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '.gitignore';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showToast('已下载 .gitignore');
+}
+
+/* ---------- 主题切换 ---------- */
+const themeBtn = $('#themeBtn');
+const SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
+const MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+
+function setTheme(dark) {
+  document.documentElement.classList.toggle('dark', dark);
+  themeBtn.innerHTML = dark ? SUN : MOON;
+  themeBtn.title = dark ? '切换到浅色' : '切换到深色';
+  try { localStorage.setItem('gig-theme', dark ? 'dark' : 'light'); } catch {}
+}
+
+/* ---------- 初始化 ---------- */
+function init() {
+  loadSelected();
+  loadCustom();
+  $('#customRules').value = state.custom;
+
+  renderGroups();
+  renderPreview();
+
+  $('#searchBox').addEventListener('input', (e) => {
+    state.search = e.target.value;
+    renderGroups();
+  });
+
+  $('#customRules').addEventListener('input', (e) => {
+    state.custom = e.target.value;
+    saveCustom();
+    renderPreview();
+  });
+
+  $('#commonBtn').addEventListener('click', selectCommon);
+  $('#clearBtn').addEventListener('click', clearAll);
+  $('#copyBtn').addEventListener('click', copyResult);
+  $('#downloadBtn').addEventListener('click', downloadResult);
+
+  themeBtn.addEventListener('click', () => setTheme(!document.documentElement.classList.contains('dark')));
+  try {
+    const saved = localStorage.getItem('gig-theme');
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setTheme(saved ? saved === 'dark' : prefersDark);
+  } catch { setTheme(false); }
+}
+
+init();
+</script>
+</body>
+</html>
