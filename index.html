@@ -107,13 +107,13 @@
     flex: 1; min-width: 0; overflow: auto;
     padding: 18px 20px;
   }
-  .panel.left { max-width: 420px; border-right: 1px solid var(--border); }
+  .panel.left { max-width: 420px; border-right: 1px solid var(--border); padding-top: 0; }
   .panel.right { background: var(--panel); }
 
   /* ---------- 搜索框 ---------- */
   .search-wrap {
     position: sticky; top: 0; z-index: 10;
-    background: var(--bg); padding-bottom: 12px;
+    background: var(--bg); padding-top: 18px; padding-bottom: 12px;
   }
   .search-box {
     width: 100%; height: 40px;
@@ -328,6 +328,46 @@ const $ = (s) => document.querySelector(s);
 
 /* ---------- 模板库（内嵌常量，零依赖） ---------- */
 const TEMPLATES = [
+  // AI 工具
+  { id: 'claude-code', name: 'Claude Code', category: 'AI 工具', rules:
+`# 本地个人配置，团队共享配置建议提交
+.claude/settings.local.json
+CLAUDE.local.md
+.claude/worktrees/` },
+  { id: 'cursor', name: 'Cursor', category: 'AI 工具', rules:
+`# 若团队共享 .cursor/rules，请改为只忽略本地部分
+.cursor/
+.cursorignore` },
+  { id: 'copilot', name: 'GitHub Copilot', category: 'AI 工具', rules:
+`.copilot/
+**/.copilot/
+# Copilot 指令文件（如团队共享请移除此行）
+.github/copilot-instructions.md` },
+  { id: 'aider', name: 'Aider', category: 'AI 工具', rules:
+`.aider*
+!.aider.conf.yml
+.env` },
+  { id: 'cline', name: 'Cline / Roo Code', category: 'AI 工具', rules:
+`.cline/
+.roo/
+.clinerules
+.roomodes` },
+  { id: 'windsurf', name: 'Windsurf', category: 'AI 工具', rules:
+`.windsurf/
+# 若团队共享规则请移除此行
+.windsurfrules` },
+  { id: 'continue', name: 'Continue', category: 'AI 工具', rules:
+`.continue/` },
+  { id: 'gemini-cli', name: 'Gemini CLI', category: 'AI 工具', rules:
+`.gemini/
+# 若团队共享设置请改为只忽略本地部分
+gemini-settings.json` },
+  { id: 'codex', name: 'OpenAI Codex', category: 'AI 工具', rules:
+`.codex/` },
+  { id: 'grok', name: 'Grok', category: 'AI 工具', rules:
+`.grok/
+.grokignore` },
+
   // 语言类
   { id: 'node', name: 'Node', category: '语言', rules:
 `node_modules/
@@ -827,7 +867,7 @@ function loadCustom() {
 
 /* ---------- 模板查询 ---------- */
 function getCategoryOrder() {
-  return ['语言', '前端', 'IDE', '系统', '工具', '其他'];
+  return ['AI 工具', '语言', '前端', 'IDE', '系统', '工具', '其他'];
 }
 
 function groupTemplates(templates) {
